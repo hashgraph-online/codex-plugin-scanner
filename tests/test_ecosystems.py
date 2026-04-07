@@ -93,6 +93,7 @@ def test_scan_auto_repository_includes_non_codex_packages(tmp_path: Path) -> Non
 
     assert set(result.ecosystems) >= {"codex", "gemini"}
     assert any(category.name.startswith("[gemini:") for category in result.categories)
+    assert all(finding.rule_id != "PLUGIN_JSON_MISSING" for finding in result.findings)
 
 
 def test_mixed_scan_rebases_findings_to_scan_root() -> None:
@@ -140,3 +141,20 @@ def test_opencode_empty_object_config_is_not_marked_invalid(tmp_path: Path) -> N
     result = scan_plugin(tmp_path, ScanOptions(ecosystem="opencode", cisco_skill_scan="off"))
 
     assert all(finding.rule_id != "OPENCODE_CONFIG_INVALID" for finding in result.findings)
+
+
+def test_opencode_jsonc_keeps_block_comment_literals_inside_strings(tmp_path: Path) -> None:
+    (tmp_path / ".opencode" / "commands").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".opencode" / "commands" / "hello.md").write_text(
+        "---\nname: hello\ndescription: test\n---\nrun\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "opencode.jsonc").write_text(
+        '{\n  "name": "a/*b*/c",\n  "version": "1.0.0",\n  /* remove this comment */\n  "description": "demo"\n}\n',
+        encoding="utf-8",
+    )
+
+    result = scan_plugin(tmp_path, ScanOptions(ecosystem="opencode", cisco_skill_scan="off"))
+
+    assert all(finding.rule_id != "OPENCODE_CONFIG_INVALID" for finding in result.findings)
+    assert result.packages and result.packages[0].name == "a/*b*/c"

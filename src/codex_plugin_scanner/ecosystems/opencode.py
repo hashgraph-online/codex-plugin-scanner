@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 from .types import Ecosystem, NormalizedPackage, PackageCandidate
 
 IGNORED_DIRS = {"node_modules", ".git", ".venv", "venv", "dist", "__pycache__"}
-BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", flags=re.DOTALL)
 
 
 def _iter_files(root: Path, pattern: str) -> list[Path]:
@@ -23,17 +21,31 @@ def _iter_files(root: Path, pattern: str) -> list[Path]:
 
 
 def _strip_jsonc(text: str) -> str:
-    without_blocks = BLOCK_COMMENT_RE.sub("", text)
     output: list[str] = []
     in_string = False
     escape = False
     in_line_comment = False
+    in_block_comment = False
+    index = 0
 
-    for char in without_blocks:
+    while index < len(text):
+        char = text[index]
+        next_char = text[index + 1] if index + 1 < len(text) else ""
         if in_line_comment:
             if char == "\n":
                 in_line_comment = False
                 output.append(char)
+            index += 1
+            continue
+
+        if in_block_comment:
+            if char == "*" and next_char == "/":
+                in_block_comment = False
+                index += 2
+                continue
+            if char == "\n":
+                output.append(char)
+            index += 1
             continue
 
         if in_string:
@@ -44,22 +56,27 @@ def _strip_jsonc(text: str) -> str:
                 escape = True
             elif char == '"':
                 in_string = False
+            index += 1
             continue
 
         if char == '"':
             in_string = True
             output.append(char)
+            index += 1
             continue
 
-        if char == "/":
-            if output and output[-1] == "/":
-                output.pop()
-                in_line_comment = True
-                continue
-            output.append(char)
+        if char == "/" and next_char == "/":
+            in_line_comment = True
+            index += 2
+            continue
+
+        if char == "/" and next_char == "*":
+            in_block_comment = True
+            index += 2
             continue
 
         output.append(char)
+        index += 1
 
     return "".join(output)
 

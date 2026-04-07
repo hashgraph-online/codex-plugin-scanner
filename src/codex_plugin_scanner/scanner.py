@@ -114,6 +114,14 @@ def _category_prefix(scan_root: Path, package: NormalizedPackage, package_count:
     return f"[{package.ecosystem.value}:{relative_label}] "
 
 
+def _is_path_within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
 def _summarize_package(package: NormalizedPackage) -> PackageSummary:
     return PackageSummary(
         ecosystem=package.ecosystem.value,
@@ -285,13 +293,47 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
     categories: list[CategoryResult] = []
     integrations: list[IntegrationResult] = []
     codex_trust_reports = []
+    processed_packages: list[NormalizedPackage] = []
+    codex_marketplace_roots = tuple(
+        package.root_path.resolve()
+        for package in packages
+        if package.ecosystem == Ecosystem.CODEX and package.package_kind == "marketplace"
+    )
 
     for package in packages:
         package_root = package.root_path.resolve()
+        if package.ecosystem == Ecosystem.CODEX and package.package_kind == "single-plugin" and any(
+            package_root != marketplace_root and _is_path_within(package_root, marketplace_root)
+            for marketplace_root in codex_marketplace_roots
+        ):
+            continue
         needs_rebase = package_root != scan_root_resolved
         prefix = _category_prefix(scan_root, package, package_count)
 
         if package.ecosystem == Ecosystem.CODEX:
+            if package.package_kind == "marketplace":
+                codex_repo_result = _scan_repository(package_root, options)
+                codex_categories = list(codex_repo_result.categories)
+                codex_integrations = list(codex_repo_result.integrations)
+                if prefix:
+                    codex_categories = [
+                        CategoryResult(name=f"{prefix}{category.name}", checks=category.checks)
+                        for category in codex_categories
+                    ]
+                    codex_integrations = [
+                        replace(
+                            integration,
+                            name=f"{package.ecosystem.value}:{package_root.name} / {integration.name}",
+                        )
+                        for integration in codex_integrations
+                    ]
+                categories.extend(codex_categories)
+                integrations.extend(codex_integrations)
+                if codex_repo_result.trust_report is not None:
+                    codex_trust_reports.append(codex_repo_result.trust_report)
+                processed_packages.append(package)
+                continue
+
             codex_result = _scan_single_plugin(package_root, options)
             codex_categories = [
                 CategoryResult(
@@ -317,6 +359,7 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
             integrations.extend(codex_integrations)
             if codex_result.trust_report is not None:
                 codex_trust_reports.append(codex_result.trust_report)
+            processed_packages.append(package)
             continue
 
         if package.ecosystem == Ecosystem.CLAUDE:
@@ -352,6 +395,7 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
                     CategoryResult(name=f"{prefix}Code Quality", checks=quality_checks),
                 )
             )
+            processed_packages.append(package)
             continue
 
         if package.ecosystem == Ecosystem.GEMINI:
@@ -387,6 +431,7 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
                     CategoryResult(name=f"{prefix}Code Quality", checks=quality_checks),
                 )
             )
+            processed_packages.append(package)
             continue
 
         if package.ecosystem == Ecosystem.OPENCODE:
@@ -422,10 +467,12 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
                     CategoryResult(name=f"{prefix}Code Quality", checks=quality_checks),
                 )
             )
+            processed_packages.append(package)
 
     findings = tuple(finding for category in categories for check in category.checks for finding in check.findings)
     score = _score_categories(tuple(categories))
     trust_report = build_repository_trust_report(tuple(codex_trust_reports)) if codex_trust_reports else None
+    reported_packages = tuple(processed_packages) if processed_packages else tuple(packages)
     return ScanResult(
         score=score,
         grade=get_grade(score),
@@ -436,8 +483,8 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
         severity_counts=build_severity_counts(findings),
         integrations=tuple(integrations),
         trust_report=trust_report,
-        ecosystems=tuple(sorted({package.ecosystem.value for package in packages})),
-        packages=tuple(_summarize_package(package) for package in packages),
+        ecosystems=tuple(sorted({package.ecosystem.value for package in reported_packages})),
+        packages=tuple(_summarize_package(package) for package in reported_packages),
     )
 
 
