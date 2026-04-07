@@ -483,9 +483,7 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
         if package.ecosystem == Ecosystem.CODEX and package.package_kind == "marketplace"
     )
     scope = "repository" if marketplace_candidates else "plugin"
-    marketplace_file = (
-        str(marketplace_candidates[0].manifest_path) if len(marketplace_candidates) == 1 else None
-    )
+    marketplace_file = str(marketplace_candidates[0].manifest_path) if len(marketplace_candidates) == 1 else None
     return ScanResult(
         score=score,
         grade=get_grade(score),
