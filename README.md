@@ -1,4 +1,4 @@
-# HOL Codex Plugin Scanner
+# HOL Plugin Ecosystem Scanner
 
 [![PyPI Version](https://img.shields.io/pypi/v/codex-plugin-scanner.svg?logo=pypi&logoColor=white&cacheSeconds=300)](https://pypi.org/project/codex-plugin-scanner/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/codex-plugin-scanner)](https://pypi.org/project/codex-plugin-scanner/)
@@ -101,6 +101,17 @@ docker run --rm \
   scan /workspace --format text
 ```
 
+## Ecosystem Support
+
+| Ecosystem | Detection Surfaces |
+| :--- | :--- |
+| Codex | `.codex-plugin/plugin.json`, `marketplace.json`, `.agents/plugins/marketplace.json` |
+| Claude Code | `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` |
+| Gemini CLI | `gemini-extension.json`, `commands/**/*.toml` |
+| OpenCode | `opencode.json`, `opencode.jsonc`, `.opencode/commands`, `.opencode/plugins` |
+
+Use `--ecosystem auto` (default) to scan all detected packages in a repository, or select a single ecosystem explicitly.
+
 ## What The Scanner Covers
 
 `codex-plugin-scanner` supports a full quality suite:
@@ -128,6 +139,15 @@ The scanner evaluates only the surfaces a plugin actually exposes, then normaliz
 ```bash
 # Scan a plugin directory
 codex-plugin-scanner ./my-plugin
+
+# Auto-detect all supported ecosystems inside a repo (default)
+codex-plugin-scanner ./plugins-repo --ecosystem auto
+
+# Scan only Claude package surfaces
+codex-plugin-scanner ./plugins-repo --ecosystem claude
+
+# List supported ecosystems
+codex-plugin-scanner --list-ecosystems
 
 # Output JSON
 codex-plugin-scanner ./my-plugin --json

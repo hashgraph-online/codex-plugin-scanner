@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "codex-plugin-scanner"
 version = "1.4.0"
-description = "Security, operational-security, and publishability scanner for Codex plugins with Cisco-backed skill analysis."
+description = "Security, operational-security, and publishability scanner for Codex, Claude, Gemini, and OpenCode plugin ecosystems."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.10"
@@ -28,6 +28,7 @@ classifiers = [
 ]
 dependencies = [
     "rich>=13.0",
+    "tomli>=2.0; python_version < '3.11'",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +50,7 @@ publish = [
 
 [project.scripts]
 codex-plugin-scanner = "codex_plugin_scanner.cli:main"
+plugin-ecosystem-scanner = "codex_plugin_scanner.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/hashgraph-online/codex-plugin-scanner"
