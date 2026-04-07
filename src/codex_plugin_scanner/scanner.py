@@ -128,7 +128,12 @@ def _summarize_package(package: NormalizedPackage) -> PackageSummary:
 def _rebase_finding(finding: Finding, plugin_dir: Path, repo_root: Path) -> Finding:
     if not finding.file_path:
         return finding
-    rebased_path = (plugin_dir / finding.file_path).resolve().relative_to(repo_root).as_posix()
+    file_path = Path(finding.file_path)
+    resolved_path = file_path.resolve() if file_path.is_absolute() else (plugin_dir / file_path).resolve()
+    try:
+        rebased_path = resolved_path.relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return finding
     return replace(finding, file_path=rebased_path)
 
 
@@ -137,6 +142,17 @@ def _rebase_check_result(check: CheckResult, plugin_dir: Path, repo_root: Path) 
         check,
         findings=tuple(_rebase_finding(finding, plugin_dir, repo_root) for finding in check.findings),
     )
+
+
+def _maybe_rebase_checks(
+    checks: tuple[CheckResult, ...],
+    plugin_dir: Path,
+    repo_root: Path,
+    enabled: bool,
+) -> tuple[CheckResult, ...]:
+    if not enabled:
+        return checks
+    return tuple(_rebase_check_result(check, plugin_dir, repo_root) for check in checks)
 
 
 def _rebase_plugin_result(plugin_result: ScanResult, plugin_target: LocalPluginTarget, repo_root: Path) -> ScanResult:
@@ -265,17 +281,25 @@ def _scan_repository(repo_root: Path, options: ScanOptions) -> ScanResult:
 
 def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], options: ScanOptions) -> ScanResult:
     package_count = len(packages)
+    scan_root_resolved = scan_root.resolve()
     categories: list[CategoryResult] = []
     integrations: list[IntegrationResult] = []
     codex_trust_reports = []
 
     for package in packages:
         package_root = package.root_path.resolve()
+        needs_rebase = package_root != scan_root_resolved
         prefix = _category_prefix(scan_root, package, package_count)
 
         if package.ecosystem == Ecosystem.CODEX:
             codex_result = _scan_single_plugin(package_root, options)
-            codex_categories = list(codex_result.categories)
+            codex_categories = [
+                CategoryResult(
+                    name=category.name,
+                    checks=_maybe_rebase_checks(category.checks, package_root, scan_root_resolved, needs_rebase),
+                )
+                for category in codex_result.categories
+            ]
             codex_integrations = list(codex_result.integrations)
             if prefix:
                 codex_categories = [
@@ -296,43 +320,106 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
             continue
 
         if package.ecosystem == Ecosystem.CLAUDE:
+            claude_checks = _maybe_rebase_checks(
+                run_claude_checks(package),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            security_checks = _maybe_rebase_checks(
+                run_security_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            operational_checks = _maybe_rebase_checks(
+                run_operational_security_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            quality_checks = _maybe_rebase_checks(
+                run_code_quality_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
             categories.extend(
                 (
-                    CategoryResult(name=f"{prefix}Claude Plugin", checks=run_claude_checks(package)),
-                    CategoryResult(name=f"{prefix}Security", checks=run_security_checks(package_root)),
-                    CategoryResult(
-                        name=f"{prefix}Operational Security",
-                        checks=run_operational_security_checks(package_root),
-                    ),
-                    CategoryResult(name=f"{prefix}Code Quality", checks=run_code_quality_checks(package_root)),
+                    CategoryResult(name=f"{prefix}Claude Plugin", checks=claude_checks),
+                    CategoryResult(name=f"{prefix}Security", checks=security_checks),
+                    CategoryResult(name=f"{prefix}Operational Security", checks=operational_checks),
+                    CategoryResult(name=f"{prefix}Code Quality", checks=quality_checks),
                 )
             )
             continue
 
         if package.ecosystem == Ecosystem.GEMINI:
+            gemini_checks = _maybe_rebase_checks(
+                run_gemini_checks(package),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            security_checks = _maybe_rebase_checks(
+                run_security_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            operational_checks = _maybe_rebase_checks(
+                run_operational_security_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            quality_checks = _maybe_rebase_checks(
+                run_code_quality_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
             categories.extend(
                 (
-                    CategoryResult(name=f"{prefix}Gemini Extension", checks=run_gemini_checks(package)),
-                    CategoryResult(name=f"{prefix}Security", checks=run_security_checks(package_root)),
-                    CategoryResult(
-                        name=f"{prefix}Operational Security",
-                        checks=run_operational_security_checks(package_root),
-                    ),
-                    CategoryResult(name=f"{prefix}Code Quality", checks=run_code_quality_checks(package_root)),
+                    CategoryResult(name=f"{prefix}Gemini Extension", checks=gemini_checks),
+                    CategoryResult(name=f"{prefix}Security", checks=security_checks),
+                    CategoryResult(name=f"{prefix}Operational Security", checks=operational_checks),
+                    CategoryResult(name=f"{prefix}Code Quality", checks=quality_checks),
                 )
             )
             continue
 
         if package.ecosystem == Ecosystem.OPENCODE:
+            opencode_checks = _maybe_rebase_checks(
+                run_opencode_checks(package),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            security_checks = _maybe_rebase_checks(
+                run_security_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            operational_checks = _maybe_rebase_checks(
+                run_operational_security_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
+            quality_checks = _maybe_rebase_checks(
+                run_code_quality_checks(package_root),
+                package_root,
+                scan_root_resolved,
+                needs_rebase,
+            )
             categories.extend(
                 (
-                    CategoryResult(name=f"{prefix}OpenCode Plugin", checks=run_opencode_checks(package)),
-                    CategoryResult(name=f"{prefix}Security", checks=run_security_checks(package_root)),
-                    CategoryResult(
-                        name=f"{prefix}Operational Security",
-                        checks=run_operational_security_checks(package_root),
-                    ),
-                    CategoryResult(name=f"{prefix}Code Quality", checks=run_code_quality_checks(package_root)),
+                    CategoryResult(name=f"{prefix}OpenCode Plugin", checks=opencode_checks),
+                    CategoryResult(name=f"{prefix}Security", checks=security_checks),
+                    CategoryResult(name=f"{prefix}Operational Security", checks=operational_checks),
+                    CategoryResult(name=f"{prefix}Code Quality", checks=quality_checks),
                 )
             )
 
@@ -382,6 +469,13 @@ def scan_plugin(plugin_dir: str | Path, options: ScanOptions | None = None) -> S
     scan_options = options or ScanOptions()
     requested_ecosystem = resolve_ecosystem(scan_options.ecosystem)
     discovery = discover_scan_targets(resolved)
-    if discovery.scope == "repository" and requested_ecosystem in (None, Ecosystem.CODEX):
-        return _scan_repository(resolved, scan_options)
+    if discovery.scope == "repository":
+        if requested_ecosystem == Ecosystem.CODEX:
+            return _scan_repository(resolved, scan_options)
+        if requested_ecosystem is None:
+            detected_candidates = detect_packages(resolved)
+            if not detected_candidates or all(
+                candidate.ecosystem == Ecosystem.CODEX for candidate in detected_candidates
+            ):
+                return _scan_repository(resolved, scan_options)
     return _scan_non_repository_target(resolved, scan_options)

@@ -35,7 +35,7 @@ def check_opencode_config(package: NormalizedPackage) -> CheckResult:
             max_points=2,
             message="OpenCode workspace detected via .opencode directory.",
         )
-    if not package.raw_manifest:
+    if package.manifest_parse_error:
         return CheckResult(
             name="OpenCode config discovered",
             passed=False,

@@ -1,5 +1,7 @@
 """Tests for multi-ecosystem adapter detection and scanning."""
 
+import json
+import shutil
 from pathlib import Path
 
 from codex_plugin_scanner.cli import main
@@ -70,6 +72,41 @@ def test_scan_auto_detects_multiple_packages() -> None:
     assert any(category.name.startswith("[gemini:") for category in result.categories)
 
 
+def test_scan_auto_repository_includes_non_codex_packages(tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    shutil.copytree(FIXTURES / "multi-plugin-repo", repo_root)
+    gemini_root = repo_root / "gemini-ext"
+    gemini_root.mkdir(parents=True, exist_ok=True)
+    (gemini_root / "README.md").write_text("Gemini extension", encoding="utf-8")
+    (gemini_root / "gemini-extension.json").write_text(
+        json.dumps(
+            {
+                "name": "demo-gemini",
+                "version": "1.0.0",
+                "commands": [{"name": "echo", "description": "Echo command", "prompt": "hi"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = scan_plugin(repo_root, ScanOptions(ecosystem="auto", cisco_skill_scan="off"))
+
+    assert set(result.ecosystems) >= {"codex", "gemini"}
+    assert any(category.name.startswith("[gemini:") for category in result.categories)
+
+
+def test_mixed_scan_rebases_findings_to_scan_root() -> None:
+    result = scan_plugin(
+        FIXTURES / "multi-ecosystem-repo",
+        ScanOptions(ecosystem="auto", cisco_skill_scan="off"),
+    )
+    file_paths = {finding.file_path for finding in result.findings if finding.file_path}
+
+    assert any(path.startswith("codex-plugin/") for path in file_paths)
+    assert ".codex-plugin/plugin.json" not in file_paths
+    assert "SECURITY.md" not in file_paths
+
+
 def test_cli_lists_supported_ecosystems(capsys) -> None:
     rc = main(["--list-ecosystems"])
     captured = capsys.readouterr()
@@ -94,4 +131,12 @@ def test_opencode_jsonc_allows_inline_comments(tmp_path: Path) -> None:
     result = scan_plugin(tmp_path, ScanOptions(ecosystem="opencode", cisco_skill_scan="off"))
 
     assert "opencode" in result.ecosystems
+    assert all(finding.rule_id != "OPENCODE_CONFIG_INVALID" for finding in result.findings)
+
+
+def test_opencode_empty_object_config_is_not_marked_invalid(tmp_path: Path) -> None:
+    (tmp_path / "opencode.json").write_text("{}", encoding="utf-8")
+
+    result = scan_plugin(tmp_path, ScanOptions(ecosystem="opencode", cisco_skill_scan="off"))
+
     assert all(finding.rule_id != "OPENCODE_CONFIG_INVALID" for finding in result.findings)
