@@ -91,6 +91,8 @@ def test_scan_auto_repository_includes_non_codex_packages(tmp_path: Path) -> Non
 
     result = scan_plugin(repo_root, ScanOptions(ecosystem="auto", cisco_skill_scan="off"))
 
+    assert result.scope == "repository"
+    assert result.marketplace_file is not None
     assert set(result.ecosystems) >= {"codex", "gemini"}
     assert any(category.name.startswith("[gemini:") for category in result.categories)
     assert all(finding.rule_id != "PLUGIN_JSON_MISSING" for finding in result.findings)

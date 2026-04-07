@@ -477,6 +477,15 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
     score = _score_categories(tuple(categories))
     trust_report = build_repository_trust_report(tuple(codex_trust_reports)) if codex_trust_reports else None
     reported_packages = tuple(processed_packages) if processed_packages else tuple(packages)
+    marketplace_candidates = tuple(
+        package
+        for package in reported_packages
+        if package.ecosystem == Ecosystem.CODEX and package.package_kind == "marketplace"
+    )
+    scope = "repository" if marketplace_candidates else "plugin"
+    marketplace_file = (
+        str(marketplace_candidates[0].manifest_path) if len(marketplace_candidates) == 1 else None
+    )
     return ScanResult(
         score=score,
         grade=get_grade(score),
@@ -486,6 +495,8 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
         findings=findings,
         severity_counts=build_severity_counts(findings),
         integrations=tuple(integrations),
+        scope=scope,
+        marketplace_file=marketplace_file,
         trust_report=trust_report,
         ecosystems=tuple(sorted({package.ecosystem.value for package in reported_packages})),
         packages=tuple(_summarize_package(package) for package in reported_packages),
