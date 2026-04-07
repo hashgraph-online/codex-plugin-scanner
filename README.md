@@ -219,7 +219,7 @@ severity_overrides = { CODEXIGNORE_MISSING = "low" }
 ## Example Output
 
 ```text
-🔗 Codex Plugin Scanner v1.4.0
+🔗 Codex Plugin Scanner v2.0.0
 Scanning: ./my-plugin
 
 ── Manifest Validation (31/31) ──
@@ -351,7 +351,7 @@ When a tagged release is published, [publish-action-repo.yml](./.github/workflow
 
 - create the dedicated action repository if it does not already exist
 - sync the root-ready `action.yml`, `README.md`, `LICENSE`, and `SECURITY.md`
-- push the immutable release tag such as `v1.4.0`
+- push the immutable release tag such as `v2.0.0`
 - move the floating `v1` tag
 - create or update the corresponding release in the action repository
 
@@ -480,7 +480,7 @@ The [HOL Registry Broker Codex Plugin](https://github.com/hashgraph-online/regis
 HOL Registry scores: **Trust 80** / **Review 83** / **Enforce 74**
 
 ```text
-🔗 Codex Plugin Scanner v1.4.0
+🔗 Codex Plugin Scanner v2.0.0
 Scanning: ./registry-broker-codex-plugin
 
 ── Manifest Validation (31/31) ──
