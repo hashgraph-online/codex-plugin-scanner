@@ -302,9 +302,13 @@ def _scan_mixed_packages(scan_root: Path, packages: list[NormalizedPackage], opt
 
     for package in packages:
         package_root = package.root_path.resolve()
-        if package.ecosystem == Ecosystem.CODEX and package.package_kind == "single-plugin" and any(
-            package_root != marketplace_root and _is_path_within(package_root, marketplace_root)
-            for marketplace_root in codex_marketplace_roots
+        if (
+            package.ecosystem == Ecosystem.CODEX
+            and package.package_kind == "single-plugin"
+            and any(
+                package_root != marketplace_root and _is_path_within(package_root, marketplace_root)
+                for marketplace_root in codex_marketplace_roots
+            )
         ):
             continue
         needs_rebase = package_root != scan_root_resolved
