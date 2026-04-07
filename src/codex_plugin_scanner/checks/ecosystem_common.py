@@ -32,4 +32,3 @@ def has_frontmatter(text: str) -> bool:
         return False
     frontmatter = parts[1]
     return "name:" in frontmatter and "description:" in frontmatter
-

@@ -73,11 +73,8 @@ class GeminiAdapter:
             name=manifest.get("name") if isinstance(manifest.get("name"), str) else None,
             version=manifest.get("version") if isinstance(manifest.get("version"), str) else None,
             metadata={
-                key: value
-                for key in ("description", "publisher")
-                if isinstance((value := manifest.get(key)), str)
+                key: value for key in ("description", "publisher") if isinstance((value := manifest.get(key)), str)
             },
             components=components,
             raw_manifest=manifest,
         )
-

@@ -18,4 +18,3 @@ class EcosystemAdapter(Protocol):
 
     def parse(self, candidate: PackageCandidate) -> NormalizedPackage:
         """Parse a detected package candidate into normalized form."""
-

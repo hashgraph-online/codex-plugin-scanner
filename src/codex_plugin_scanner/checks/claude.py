@@ -31,9 +31,7 @@ def _finding(
 def check_manifest_exists(package: NormalizedPackage) -> CheckResult:
     exists = package.manifest_path is not None and package.manifest_path.exists()
     file_path = (
-        ".claude-plugin/plugin.json"
-        if package.package_kind == "single-plugin"
-        else ".claude-plugin/marketplace.json"
+        ".claude-plugin/plugin.json" if package.package_kind == "single-plugin" else ".claude-plugin/marketplace.json"
     )
     return CheckResult(
         name="Claude manifest exists",
@@ -96,7 +94,7 @@ def check_required_fields(package: NormalizedPackage) -> CheckResult:
         passed=False,
         points=0,
         max_points=5,
-        message=f'Missing required Claude fields: {", ".join(missing)}',
+        message=f"Missing required Claude fields: {', '.join(missing)}",
         findings=tuple(
             _finding(
                 f"CLAUDE_FIELD_MISSING_{field.upper()}",

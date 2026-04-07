@@ -110,4 +110,3 @@ class ClaudeAdapter:
             policies=policies,
             raw_manifest=manifest,
         )
-

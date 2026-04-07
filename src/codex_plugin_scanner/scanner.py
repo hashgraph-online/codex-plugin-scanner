@@ -240,9 +240,8 @@ def _scan_repository(repo_root: Path, options: ScanOptions) -> ScanResult:
     trust_report = build_repository_trust_report(
         tuple(plugin.trust_report for plugin in plugin_results if plugin.trust_report is not None)
     )
-    ecosystems = (
-        tuple(sorted({ecosystem for plugin in plugin_results for ecosystem in plugin.ecosystems}))
-        or ("codex",)
+    ecosystems = tuple(sorted({ecosystem for plugin in plugin_results for ecosystem in plugin.ecosystems})) or (
+        "codex",
     )
     packages = tuple(summary for plugin in plugin_results for summary in plugin.packages)
     return ScanResult(

@@ -41,4 +41,3 @@ class NormalizedPackage:
     components: dict[str, tuple[str, ...]] = field(default_factory=dict)
     policies: dict[str, str] = field(default_factory=dict)
     raw_manifest: dict[str, object] = field(default_factory=dict)
-

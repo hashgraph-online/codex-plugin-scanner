@@ -13,4 +13,3 @@ __all__ = [
     "list_supported_ecosystems",
     "resolve_ecosystem",
 ]
-

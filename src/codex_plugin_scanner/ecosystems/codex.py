@@ -54,9 +54,9 @@ class CodexAdapter:
             package_root = None
             if marketplace_path.parent.name == "plugins" and marketplace_path.parent.parent.name == ".agents":
                 package_root = marketplace_path.parent.parent.parent
-            elif marketplace_path.parent == root or (
-                marketplace_path.parent / ".codex-plugin" / "plugin.json"
-            ).exists():
+            elif (
+                marketplace_path.parent == root or (marketplace_path.parent / ".codex-plugin" / "plugin.json").exists()
+            ):
                 package_root = marketplace_path.parent
             if package_root is None:
                 continue
